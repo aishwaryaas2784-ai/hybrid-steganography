@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Generated files
+output/
+uploads/
+message_store/
+
+# Sensitive/private files
+keys/
+users.json
+
+# Environment variables
+.env
+.env.*
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

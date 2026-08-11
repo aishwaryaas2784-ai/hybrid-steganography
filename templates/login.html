@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login | Hybrid Steganography Messenger</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container" style="max-width:420px; margin-top:80px;">
+        <header>
+            <h1>Secure Stego Messenger</h1>
+            <p class="subtitle">Log in to your account</p>
+        </header>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash">{% for msg in messages %}<p>{{ msg }}</p>{% endfor %}</div>
+            {% endif %}
+        {% endwith %}
+        <div class="card">
+            <form action="/login" method="post">
+                <label>Username</label>
+                <input type="text" name="username" autocomplete="off" required>
+
+                <label>Password</label>
+                <input type="password" name="password" required>
+
+                <button type="submit">Log In</button>
+            </form>
+            <p style="text-align:center; margin-top:16px; color:#94a3b8;">
+                Don't have an account? <a href="/signup" style="color:#38bdf8;">Sign up</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

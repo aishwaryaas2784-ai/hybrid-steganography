@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hybrid Stego Messenger</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hybrid Audio-Image Stego Messenger</h1>
+            <p class="subtitle">Logged in as <strong>{{ full_name }}</strong> (@{{ username }}) &bull; <a href="/logout" style="color:#38bdf8;">Logout</a></p>
+            <p class="subtitle" style="color:#4ade80;">RSA-2048 key exchange active — no manual passwords needed</p>
+        </header>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash">{% for msg in messages %}<p>{{ msg }}</p>{% endfor %}</div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="grid">
+            <div class="card">
+                <h2>Send a Secret Message</h2>
+                <form action="/send" method="post" enctype="multipart/form-data">
+                    <label>Recipient Username (they must have an account already)</label>
+                    <input type="text" name="recipient" list="recentContacts" autocomplete="off" required>
+                    <datalist id="recentContacts">
+                        {% for contact in recent_recipients %}
+                            <option value="{{ contact }}">
+                        {% endfor %}
+                    </datalist>
+
+                    <label>What do you want to hide?</label>
+                    <select name="secret_type" id="secretType" onchange="toggleSecretInput()">
+                        <option value="text">Text message</option>
+                        <option value="file">A file (image / audio / any file)</option>
+                    </select>
+
+                    <div id="textInput">
+                        <label>Secret Message</label>
+                        <textarea name="secret_message" rows="3"></textarea>
+                    </div>
+
+                    <div id="fileInput" style="display:none;">
+                        <label>Secret File</label>
+                        <input type="file" name="secret_file">
+                    </div>
+
+                    <label>Embedding Method</label>
+                    <select name="embedding_method">
+                        <option value="lsb">Spatial Domain (Chaotic-Map LSB) — higher capacity</option>
+                        <option value="dwt">Transform Domain (DWT) — more robust to compression</option>
+                    </select>
+
+                    <label>Cover Image (.png) — required</label>
+                    <input type="file" name="cover_image" accept="image/png" required>
+
+                    <label>Cover Audio (.wav) — optional, adds hybrid layer</label>
+                    <input type="file" name="cover_audio" accept="audio/wav">
+
+                    <button type="submit">Encrypt, Hide &amp; Send</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Inbox</h2>
+                {% if inbox|length == 0 %}
+                    <p style="color:#94a3b8;">No messages yet.</p>
+                {% endif %}
+                {% for msg in inbox %}
+                <details class="result" style="margin-bottom:14px; cursor:pointer;">
+                    <summary style="font-weight:bold; color:#38bdf8; cursor:pointer;">
+                        New message from {{ msg.sender }} <span style="color:#64748b; font-weight:normal;">({{ msg.timestamp }})</span>
+                    </summary>
+
+                    <p style="margin-top:10px;">Type: {{ msg.secret_type }} &bull; Layer: {{ "hybrid image+audio" if msg.used_audio_layer else "image-only" }} &bull; Method: {{ "DWT (transform domain)" if msg.embedding_method == "dwt" else "Chaotic-Map LSB (spatial domain)" }}</p>
+                    <p>AI Security Score: {{ msg.security_score }}</p>
+
+                    <a class="download-btn" href="/download_final/{{ msg.msg_id }}">Download Received File</a>
+                    <form action="/delete/{{ msg.msg_id }}" method="post" style="display:inline; margin-left:8px;">
+                        <button type="submit" style="background:#dc2626; width:auto; padding:8px 14px; margin-top:0;">Delete</button>
+                    </form>
+
+                    <form action="/decode/{{ msg.msg_id }}" method="post" style="margin-top:10px;">
+                        <button type="submit">Decode (auto, using your RSA private key)</button>
+                    </form>
+                    {% if decoded_msg_id == msg.msg_id %}
+                        {% if recovered.type == "text" %}
+                            <p class="recovered-msg"><strong>Decoded message:</strong> {{ recovered.content }}</p>
+                        {% else %}
+                            <p class="recovered-msg">Recovered file: {{ recovered.filename }}</p>
+                            <a class="download-btn" href="/download_recovered/{{ msg.msg_id }}/{{ recovered.filename }}">Download {{ recovered.filename }}</a>
+                        {% endif %}
+                    {% endif %}
+                </details>
+                {% endfor %}
+            </div>
+        </div>
+
+        <footer>
+            <p>AES-256 + SHA-256 Integrity &bull; Chaotic-Map LSB / DWT &bull; RSA-2048 Key Exchange &bull; AI Steganalysis Scoring</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleSecretInput() {
+            const type = document.getElementById("secretType").value;
+            document.getElementById("textInput").style.display = type === "text" ? "block" : "none";
+            document.getElementById("fileInput").style.display = type === "file" ? "block" : "none";
+        }
+    </script>
+</body>
+</html>
