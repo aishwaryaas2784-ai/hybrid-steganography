@@ -1,0 +1,297 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inbox | Hybrid Stego Messenger</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        .audio-section {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid #38bdf8;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .audio-section h3 {
+            color: #38bdf8;
+            margin: 0 0 12px;
+            font-size: 16px;
+        }
+
+        .audio-player {
+            display: block;
+            width: 100%;
+            max-width: 550px;
+            margin: 10px 0;
+        }
+
+        .audio-note {
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .recovered-msg {
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <h1>📥 Your Inbox</h1>
+
+        <p class="subtitle">
+            {{ full_name }} (@{{ username }})
+            &bull;
+            <a href="/" style="color:#38bdf8;">← Back to Send</a>
+            &bull;
+            <a href="/logout" style="color:#38bdf8;">Logout</a>
+        </p>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="flash">
+                {% for msg_text in messages %}
+                    <p>{{ msg_text }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+
+        {% if inbox|length == 0 %}
+            <p style="color:#94a3b8; text-align:center; padding:20px 0;">
+                No messages yet. Ask a friend to send you a secret 🔐
+            </p>
+        {% endif %}
+
+        {% for msg in inbox %}
+
+            {% set final_ext = msg.final_filename.rsplit('.', 1)[-1].lower() if msg.final_filename and '.' in msg.final_filename else '' %}
+
+            <details class="result" style="margin-bottom:14px; cursor:pointer;">
+
+                <summary style="font-weight:bold; color:#38bdf8; cursor:pointer;">
+                    New message from {{ msg.sender }}
+
+                    <span style="color:#64748b; font-weight:normal;">
+                        ({{ msg.timestamp }})
+                    </span>
+                </summary>
+
+                <p style="margin-top:10px;">
+                    Type: {{ msg.secret_type }}
+                    &bull;
+                    Layer:
+                    {{ "hybrid image+audio" if msg.used_audio_layer else "image-only" }}
+                    &bull;
+                    Method:
+                    {{ "DWT (transform domain)" if msg.embedding_method == "dwt" else "Chaotic-Map LSB (spatial domain)" }}
+                </p>
+
+                <p>
+                    AI Security Score:
+                    <span class="ai-score-value"
+                          data-score="{{ msg.security_score }}">
+                        {{ msg.security_score }}
+                    </span>
+                </p>
+
+                <!-- RECEIVED COVER AUDIO -->
+                {% if final_ext in ['wav', 'mp3', 'mpeg', 'm4a', 'aac', 'ogg', 'flac', 'webm'] %}
+
+                    <div class="audio-section">
+
+                        <h3>🎵 Received Cover Audio</h3>
+
+                        <audio class="audio-player" controls preload="metadata">
+                            <source
+                                src="{{ url_for('preview_final', msg_id=msg.msg_id) }}"
+                                type="{{
+                                    'audio/wav' if final_ext == 'wav'
+                                    else 'audio/mpeg' if final_ext in ['mp3', 'mpeg']
+                                    else 'audio/mp4' if final_ext in ['m4a', 'aac']
+                                    else 'audio/ogg' if final_ext == 'ogg'
+                                    else 'audio/flac' if final_ext == 'flac'
+                                    else 'audio/webm'
+                                }}">
+
+                            Your browser does not support audio playback.
+                        </audio>
+
+                        <p class="audio-note">
+                            Play the received cover audio here.
+                        </p>
+
+                    </div>
+
+                {% endif %}
+
+                <!-- DOWNLOAD RECEIVED FILE -->
+                <a class="download-btn"
+                   href="{{ url_for('download_final', msg_id=msg.msg_id) }}">
+                    Download Received File
+                </a>
+
+                <!-- DELETE MESSAGE -->
+                <form action="{{ url_for('delete_message', msg_id=msg.msg_id) }}"
+                      method="post"
+                      style="display:inline; margin-left:8px;">
+
+                    <button type="submit"
+                            style="background:#dc2626; width:auto; padding:8px 14px; margin-top:0;">
+                        Delete
+                    </button>
+
+                </form>
+
+                <!-- DECODE MESSAGE -->
+                <form action="{{ url_for('decode_inbox', msg_id=msg.msg_id) }}"
+                      method="post"
+                      style="margin-top:10px;">
+
+                    <button type="submit">
+                        Decode (auto, using your RSA private key)
+                    </button>
+
+                </form>
+
+                <!-- RECOVERED SECRET -->
+                {% if decoded_msg_id == msg.msg_id and recovered %}
+
+                    {% if recovered.type == "text" %}
+
+                        <p class="recovered-msg">
+                            <strong>Decoded message:</strong>
+                            {{ recovered.content }}
+                        </p>
+
+                    {% else %}
+
+                        {% set secret_ext = recovered.filename.rsplit('.', 1)[-1].lower() if '.' in recovered.filename else '' %}
+
+                        <p class="recovered-msg">
+                            <strong>Recovered file:</strong>
+                            {{ recovered.filename }}
+                        </p>
+
+                        <!-- SECRET AUDIO PLAYER -->
+                        {% if secret_ext in ['wav', 'mp3', 'mpeg', 'm4a', 'aac', 'ogg', 'flac', 'webm'] %}
+
+                            <div class="audio-section">
+
+                                <h3>🎧 Secret Audio Message</h3>
+
+                                <audio class="audio-player"
+                                       controls
+                                       preload="metadata">
+
+                                    <source
+                                        src="{{ url_for('preview_recovered', msg_id=msg.msg_id, filename=recovered.filename) }}"
+                                        type="{{
+                                            'audio/wav' if secret_ext == 'wav'
+                                            else 'audio/mpeg' if secret_ext in ['mp3', 'mpeg']
+                                            else 'audio/mp4' if secret_ext in ['m4a', 'aac']
+                                            else 'audio/ogg' if secret_ext == 'ogg'
+                                            else 'audio/flac' if secret_ext == 'flac'
+                                            else 'audio/webm'
+                                        }}">
+
+                                    Your browser does not support audio playback.
+
+                                </audio>
+
+                                <p class="audio-note">
+                                    Press Play to listen to your recovered secret audio.
+                                </p>
+
+                            </div>
+
+                        {% endif %}
+
+                        <!-- DOWNLOAD RECOVERED FILE -->
+                        <a class="download-btn"
+                           href="{{ url_for('download_recovered', msg_id=msg.msg_id, filename=recovered.filename) }}">
+                            Download {{ recovered.filename }}
+                        </a>
+
+                    {% endif %}
+
+                {% endif %}
+
+            </details>
+
+        {% endfor %}
+
+    </div>
+
+    <footer>
+        <p>
+            AES-256 + SHA-256 Integrity
+            &bull; Chaotic-Map LSB / DWT
+            &bull; RSA-2048 Key Exchange
+            &bull; AI Steganalysis Scoring
+        </p>
+    </footer>
+
+</div>
+
+<script>
+
+    document.querySelectorAll("button").forEach(btn => {
+
+        btn.addEventListener("click", function(e) {
+
+            const ripple = document.createElement("span");
+
+            ripple.classList.add("ripple");
+
+            const rect = this.getBoundingClientRect();
+
+            ripple.style.left =
+                (e.clientX - rect.left) + "px";
+
+            ripple.style.top =
+                (e.clientY - rect.top) + "px";
+
+            this.appendChild(ripple);
+
+            setTimeout(() => ripple.remove(), 600);
+
+        });
+
+    });
+
+
+    document.querySelectorAll(".ai-score-value").forEach(el => {
+
+        const score = parseFloat(el.dataset.score);
+
+        const badge = document.createElement("span");
+
+        badge.className =
+            "score-badge " +
+            (score < 0.5 ? "score-low" : "score-high");
+
+        badge.textContent =
+            (score < 0.5 ? "🟢 Low Risk " : "🔴 Higher Risk ") +
+            score.toFixed(4);
+
+        el.replaceWith(badge);
+
+    });
+
+</script>
+
+</body>
+</html>

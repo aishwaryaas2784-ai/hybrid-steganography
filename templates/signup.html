@@ -5,12 +5,17 @@
     <title>Sign Up | Hybrid Steganography Messenger</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-    <div class="container" style="max-width:420px; margin-top:60px;">
+<body class="auth-body">
+    <div class="container" style="max-width:420px; margin-top:50px;">
         <header>
             <h1>Create Account</h1>
             <p class="subtitle">Join the Secure Stego Messenger</p>
         </header>
+
+        <div class="quote-box">
+            <p class="quote-text" id="quoteText">"Every image can carry a secret. Every secret deserves protection."</p>
+        </div>
+
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 <div class="flash">{% for msg in messages %}<p>{{ msg }}</p>{% endfor %}</div>
@@ -40,5 +45,40 @@
             </p>
         </div>
     </div>
+
+    <script>
+        const quotes = [
+            "Every image can carry a secret. Every secret deserves protection.",
+            "Cryptography scrambles the message. Steganography hides that one exists.",
+            "The strongest lock is the one an attacker never notices.",
+            "Data hidden in plain sight is data an attacker never searches for.",
+            "Secure communication isn't just encryption — it's invisibility."
+        ];
+        let qi = 0;
+        setInterval(() => {
+            qi = (qi + 1) % quotes.length;
+            const el = document.getElementById("quoteText");
+            el.style.opacity = 0;
+            setTimeout(() => {
+                el.textContent = '"' + quotes[qi] + '"';
+                el.style.animation = "none";
+                void el.offsetWidth;
+                el.style.animation = "quoteFade 0.8s ease";
+                el.style.opacity = 1;
+            }, 300);
+        }, 4500);
+
+        document.querySelectorAll("button").forEach(btn => {
+            btn.addEventListener("click", function(e) {
+                const ripple = document.createElement("span");
+                ripple.classList.add("ripple");
+                const rect = this.getBoundingClientRect();
+                ripple.style.left = (e.clientX - rect.left) + "px";
+                ripple.style.top = (e.clientY - rect.top) + "px";
+                this.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+    </script>
 </body>
 </html>
